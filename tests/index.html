@@ -1,0 +1,145 @@
+<!doctype html>
+<html>
+<head>
+  <title>page-visibility.js tests</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+  <style>
+    body {
+      font-family: monospace;
+      max-width: 50em;
+      margin: 0 auto;
+    }
+
+    li {
+      color: #888;
+    }
+
+    li p:first-child {
+      display: inline-block;
+    }
+
+    li:before {
+      content: '?';
+      width: 2em;
+      font-weight: bold;
+      font-size: 2em;
+      vertical-align: middle;
+      padding: 0 .2em;
+    }
+
+    .succeeded {
+      color: #070;
+    }
+
+    .succeeded:before {
+      content: '✓';
+    }
+
+    .current {
+      color: #000;
+    }
+
+    .failed {
+      color: #d00;
+    }
+
+    .failed:before {
+      content: '✗';
+    }
+  </style>
+
+  <script src="../page-visibility.js"></script>
+  <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+  <script>
+  $(function () {
+    var assertVisibilityState = function (state, deferred) {
+      if (document.visibilityState !== state) {
+        deferred.reject('document.visibilityState should be "' + state + '" but is "' + document.visibilityState + '"')
+      }
+    }
+
+    var assertHidden = function (hidden, deferred) {
+      if (document.hidden !== hidden) {
+        deferred.reject('document.hidden should be "' + hidden + '" but is "' + document.hidden + '"')
+      }
+    }
+
+    var tests = [
+      {
+        should: 'start out visible',
+        test: function (deferred) {
+          assertVisibilityState('visible', deferred)
+          assertHidden(false, deferred)
+          deferred.resolve()
+        }
+      },
+      {
+        should: 'become hidden',
+        test: function (deferred) {
+          $(document).one('visibilitychange', function () {
+            assertVisibilityState('hidden', deferred)
+            assertHidden(true, deferred)
+            deferred.resolve()
+          })
+        }
+      },
+      {
+        should: 'become visible again',
+        test: function (deferred) {
+          $(document).one('visibilitychange', function () {
+            assertVisibilityState('visible', deferred)
+            assertHidden(false, deferred)
+            deferred.resolve()
+          })
+        }
+      }
+    ];
+
+    var $results = $('<ol>'),
+        testSuite = $.Deferred()
+        previousTestResult = testSuite
+    $.each(tests, function (i, testCase) {
+      var $el = $('<li>')
+        .append($('<p>').text('the document should… ' + testCase.should))
+        .appendTo($results)
+
+      var testResult = $.Deferred()
+      previousTestResult
+        .done(function () {
+          $el.addClass('current')
+          testCase.test(testResult)
+          testResult
+            .always(function () {
+              $el.removeClass('current')
+            })
+            .done(function () {
+              $el.addClass('succeeded')
+            })
+            .fail(function (errorMessage) {
+              $el.addClass('failed')
+              $('<p>')
+                .text(errorMessage)
+                .appendTo($el)
+            })
+         })
+       previousTestResult = testResult
+    })
+    $results.appendTo('body')
+
+    previousTestResult.done(function () {
+      $('<p>').text('success! all tests passed').appendTo('body')
+    })
+
+    testSuite.resolve()
+  })
+  </script>
+</head>
+<body>
+
+<h1>page-visibility.js tests</h1>
+
+<p>open this page, ensure the first test has already passed, then hide the page and bring it back. voila!</p>
+
+</body>
+</html>
